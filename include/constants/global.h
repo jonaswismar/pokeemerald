@@ -17,6 +17,20 @@
 #define VERSION_PLATINUM 12
 #define VERSION_GAMECUBE 15
 
+// Version ID modifiers used for identifying unofficial games.
+// The idea is that each unofficial game will have its own number they can use in conjunction with one of the official origin game IDs
+// so that they do not have to requisition a new ID for every project
+#define DEV_GAME_FREAK              0   // Official Games
+#define DEV_SOLITAIRI               1	// 3-1 is Heliodor. Pokemon are also flagged with 1-1, 2-1, 4-1, 5-1, and 12-1 for legality purposes.
+#define DEV_SHINY_DRAGON_HUNTER     2	// 4-2 is FireRed DX and 5-2 is LeafGreen DX
+#define DEV_ASPARAGUS_EDUARDO       3	// Reserved.
+#define DEV_JAIZU                   4   // 3-4 is Emerald Cross
+#define DEV_RYUHOUJI                5   // 3-5 is Emerald Enhanced
+#define DEV_AQUATIC_TYPHOON         222 // Reserved.
+
+#define DEV_POKE_WORLD              112 // This Game
+#define VERSION_MODIFIER (DEV_POKE_WORLD)
+
 #define LANGUAGE_JAPANESE 1
 #define LANGUAGE_ENGLISH  2
 #define LANGUAGE_FRENCH   3
