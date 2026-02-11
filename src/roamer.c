@@ -1,5 +1,6 @@
 #include "global.h"
 #include "event_data.h"
+#include "pokedex.h"
 #include "pokemon.h"
 #include "random.h"
 #include "roamer.h"
@@ -237,6 +238,20 @@ void UpdateRoamerHPStatus(struct Pokemon *mon)
 void SetRoamerInactive(void)
 {
     ROAMER->active = FALSE;
+}
+
+void NextRoamer(void)
+{
+    if ((ROAMER->species == SPECIES_LATIAS && GetSetPokedexFlag(SpeciesToNationalPokedexNum(SPECIES_LATIOS), FLAG_GET_SEEN))
+    || (ROAMER->species == SPECIES_LATIOS && GetSetPokedexFlag(SpeciesToNationalPokedexNum(SPECIES_LATIAS), FLAG_GET_SEEN))){
+        SetRoamerInactive();
+    }
+    else{
+        bool16 createLatios = ROAMER->species == SPECIES_LATIAS;
+        ClearRoamerData();
+        ClearRoamerLocationData();
+        CreateInitialRoamerMon(createLatios);
+    }
 }
 
 void GetRoamerLocation(u8 *mapGroup, u8 *mapNum)
