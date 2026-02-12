@@ -339,7 +339,8 @@ SECTIONS {
         src/contest_link_util.o(.text);
         src/gym_leader_rematch.o(.text);
         src/battle_transition_frontier.o(.text);
-        src/international_string_util.o(.text);
+        src/international_string_util.o(.text);       
+        src/map_preview_screen.o(.text);
     } > ROM =0
 
     script_data :
@@ -702,6 +703,7 @@ SECTIONS {
         data/mystery_gift.o(.rodata);
         src/m4a_tables.o(.rodata);
         data/sound_data.o(.rodata);
+        src/map_preview_screen.o(.rodata);
     } > ROM =0
 
     song_data :
