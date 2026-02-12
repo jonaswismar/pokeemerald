@@ -4654,7 +4654,15 @@ static void TryUsePPItem(u8 taskId)
     struct PartyMenu *ptr = &gPartyMenu;
     struct Pokemon *mon;
 
-    if (ExecuteTableBasedItemEffect_(ptr->slotId, item, *moveSlot))
+    if (IsMultiBattle() == TRUE && (ptr->slotId == 1 || ptr->slotId == 4 || ptr->slotId == 5))
+    {
+        gPartyMenuUseExitCallback = FALSE;
+        PlaySE(SE_SELECT);
+        DisplayPartyMenuMessage(gText_WontHaveEffect, TRUE);
+        ScheduleBgCopyTilemapToVram(2);
+        gTasks[taskId].func = Task_ClosePartyMenuAfterText;
+    }
+    else if (ExecuteTableBasedItemEffect_(ptr->slotId, item, *moveSlot))
     {
         gPartyMenuUseExitCallback = FALSE;
         PlaySE(SE_SELECT);
