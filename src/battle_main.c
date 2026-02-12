@@ -172,6 +172,7 @@ EWRAM_DATA s32 gBattleMoveDamage = 0;
 EWRAM_DATA s32 gHpDealt = 0;
 EWRAM_DATA s32 gBideDmg[MAX_BATTLERS_COUNT] = {0};
 EWRAM_DATA u16 gLastUsedItem = 0;
+EWRAM_DATA u8 gUsingThiefBall = THIEF_BALL_NOT_USING;
 EWRAM_DATA u8 gLastUsedAbility = 0;
 EWRAM_DATA u8 gBattlerAttacker = 0;
 EWRAM_DATA u8 gBattlerTarget = 0;
@@ -198,7 +199,6 @@ EWRAM_DATA u8 gMoveResultFlags = 0;
 EWRAM_DATA u32 gHitMarker = 0;
 EWRAM_DATA static u8 sUnusedBattlersArray[MAX_BATTLERS_COUNT] = {0};
 EWRAM_DATA u8 gBideTarget[MAX_BATTLERS_COUNT] = {0};
-EWRAM_DATA u8 gUnusedFirstBattleVar2 = 0; // Never read
 EWRAM_DATA u16 gSideStatuses[NUM_BATTLE_SIDES] = {0};
 EWRAM_DATA struct SideTimer gSideTimers[NUM_BATTLE_SIDES] = {0};
 EWRAM_DATA u32 gStatuses3[MAX_BATTLERS_COUNT] = {0};
@@ -1946,6 +1946,148 @@ void BattleMainCB2(void)
     }
 }
 
+u16 checkStolenPokemon(u16 trainerNum, u16 speciesType, u16 partyIndex, bool8 set){
+    u8 trainerClass = gTrainers[trainerNum].trainerClass;
+    u8 trainerPic = gTrainers[trainerNum].trainerPic;
+    u8 varToCheck; // 1 = VAR_PKMN_STOLE_RIVAL; 2 = VAR_PKMN_STOLE_ELITE4_A; 3 = VAR_PKMN_STOLE_ELITE4_B
+    u16 monStolen = 0;
+    switch (trainerClass)
+    {
+    case TRAINER_CLASS_RIVAL:
+        switch (speciesType)
+        {
+        case SPECIES_TREECKO:
+        case SPECIES_GROVYLE:
+        case SPECIES_SCEPTILE:
+        case SPECIES_TORCHIC:
+        case SPECIES_COMBUSKEN:
+        case SPECIES_BLAZIKEN:
+        case SPECIES_MUDKIP:
+        case SPECIES_MARSHTOMP:
+        case SPECIES_SWAMPERT:
+            monStolen = STOLE_STARTER;
+            break;
+        case SPECIES_WINGULL:
+        case SPECIES_PELIPPER:
+            monStolen = STOLE_WINGULL;
+            break;
+        case SPECIES_SLUGMA:
+        case SPECIES_MAGCARGO:
+            monStolen = STOLE_SLUGMA;
+            break;
+        case SPECIES_LOTAD:
+        case SPECIES_LOMBRE:
+        case SPECIES_LUDICOLO:
+            monStolen = STOLE_LOTAD;
+            break;
+        case SPECIES_TROPIUS:
+            monStolen = STOLE_TROPIUS;
+            break;
+        case SPECIES_TORKOAL:
+            monStolen = STOLE_TORKOAL;
+            break;
+        case SPECIES_GROUDON:
+        case SPECIES_KYOGRE:
+            monStolen = STOLE_LEGENDARY;
+            break;
+        case SPECIES_RALTS:
+        case SPECIES_KIRLIA:
+        case SPECIES_GARDEVOIR:
+            monStolen = STOLE_RALTS;
+            break;
+        case SPECIES_ALTARIA:
+            monStolen = STOLE_ALTARIA;
+            break;
+        case SPECIES_DELCATTY:
+            monStolen = STOLE_DELCATTY;
+            break;
+        case SPECIES_ROSELIA:
+            monStolen = STOLE_ROSELIA;
+            break;
+        case SPECIES_MAGNETON:
+            monStolen = STOLE_MAGNETON;
+            break;
+        }
+        varToCheck = 1;
+        break;
+    case TRAINER_CLASS_LEADER:
+        switch (trainerPic)
+        {
+        case TRAINER_PIC_LEADER_NORMAN:
+            switch (speciesType)
+            {
+            case SPECIES_SLAKING:
+                monStolen = STOLE_SLAKING;
+                break;
+            }
+            varToCheck = 1;
+            break;
+        }
+        break;
+    case TRAINER_CLASS_ELITE_FOUR:
+    // Elite Four party is always the same, so the party order can be used. This also allows picking same-species mon in their party uniquely
+        switch (trainerPic)
+        {
+        case TRAINER_PIC_ELITE_FOUR_SIDNEY:
+            monStolen = (1 << (partyIndex + STOLE_SIDNEY_START));
+            varToCheck = 2;
+            break;
+        case TRAINER_PIC_ELITE_FOUR_PHOEBE:
+            monStolen = (1 << (partyIndex + STOLE_PHEOBE_START));
+            varToCheck = 2;
+            break;
+        case TRAINER_PIC_ELITE_FOUR_GLACIA:
+            monStolen = (1 << (partyIndex + STOLE_GLACIA_START));
+            varToCheck = 2;
+            break;
+        case TRAINER_PIC_ELITE_FOUR_DRAKE:
+            monStolen = (1 << (partyIndex + STOLE_DRAKE_START));
+            varToCheck = 3;
+            break;
+        }
+        break;
+    default:
+        monStolen = 0;
+        break;
+    }
+    if (set){  // Sets the variable on whether the pokemon was stolen.
+        if (monStolen != 0){
+            switch (varToCheck)
+            {
+            case 1:
+                VarSet(VAR_PKMN_STOLE_RIVAL, VarGet(VAR_PKMN_STOLE_RIVAL) | monStolen);
+                break;
+            case 2:
+                VarSet(VAR_PKMN_STOLE_ELITE4_A, VarGet(VAR_PKMN_STOLE_ELITE4_A) | monStolen);
+                break;
+            case 3:
+                VarSet(VAR_PKMN_STOLE_ELITE4_B, VarGet(VAR_PKMN_STOLE_ELITE4_B) | monStolen);
+                break;
+            default:
+                break;
+            }
+        }
+        return monStolen;
+    }
+    else{  // Used to return if the Pokemon was stolen
+        switch (varToCheck)
+        {
+        case 1:
+            return monStolen & VarGet(VAR_PKMN_STOLE_RIVAL);
+            break;
+        case 2:
+            return monStolen & VarGet(VAR_PKMN_STOLE_ELITE4_A);
+            break;
+        case 3:
+            return monStolen & VarGet(VAR_PKMN_STOLE_ELITE4_B);
+            break;
+        default:
+            return 0;
+            break;
+        }
+    }
+}
+
 static void FreeRestoreBattleData(void)
 {
     gMain.callback1 = gPreBattleCallback1;
@@ -2032,6 +2174,9 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum, bool8 fir
     u8 fixedIV;
     s32 i, j;
     u8 monsCount;
+u16 species;  
+    u32 fixedOTID;
+    u8 otGender;
 
     if (trainerNum == TRAINER_SECRET_BASE)
         return 0;
@@ -2054,17 +2199,23 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum, bool8 fir
         {
             monsCount = gTrainers[trainerNum].partySize;
         }
+fixedOTID = Random32();
 
         for (i = 0; i < monsCount; i++)
         {
 
-            if (gTrainers[trainerNum].doubleBattle == TRUE)
+            if (gTrainers[trainerNum].doubleBattle == TRUE){
                 personalityValue = 0x80;
-            else if (gTrainers[trainerNum].encounterMusic_gender & F_TRAINER_FEMALE)
-                personalityValue = 0x78; // Use personality more likely to result in a female Pokémon
-            else
-                personalityValue = 0x88; // Use personality more likely to result in a male Pokémon
-
+           otGender = gSaveBlock2Ptr->playerGender;
+            }
+            else if (gTrainers[trainerNum].encounterMusic_gender & F_TRAINER_FEMALE){
+                 personalityValue = 0x78; // Use personality more likely to result in a female Pokémon
+            otGender = FEMALE;
+            }
+            else{
+                personalityValue = 0x88; // Use personality more likely to result in a male Pokémon}
+                otGender = MALE;
+            }
             for (j = 0; gTrainers[trainerNum].trainerName[j] != EOS; j++)
                 nameHash += gTrainers[trainerNum].trainerName[j];
 
@@ -2073,26 +2224,34 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum, bool8 fir
             case 0:
             {
                 const struct TrainerMonNoItemDefaultMoves *partyData = gTrainers[trainerNum].party.NoItemDefaultMoves;
-
+                if (checkStolenPokemon(trainerNum, species, i, FALSE)){
+                    continue;
+                }
                 for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
                     nameHash += gSpeciesNames[partyData[i].species][j];
 
                 personalityValue += nameHash << 8;
                 fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
-                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
-                break;
+                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_PRESET, fixedOTID);
+                SetMonData(&party[i], MON_DATA_OT_GENDER, &otGender);
+                SetMonData(&party[i], MON_DATA_OT_NAME, gTrainers[trainerNum].trainerName);
+break;
             }
             case F_TRAINER_PARTY_CUSTOM_MOVESET:
             {
                 const struct TrainerMonNoItemCustomMoves *partyData = gTrainers[trainerNum].party.NoItemCustomMoves;
-
+if (checkStolenPokemon(trainerNum, species, i, FALSE)){
+                    continue;
+                }
                 for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
                     nameHash += gSpeciesNames[partyData[i].species][j];
 
                 personalityValue += nameHash << 8;
                 fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
-                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
-
+                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_PRESET, fixedOTID);
+                SetMonData(&party[i], MON_DATA_OT_GENDER, &otGender);
+                SetMonData(&party[i], MON_DATA_OT_NAME, gTrainers[trainerNum].trainerName);
+ 
                 for (j = 0; j < MAX_MON_MOVES; j++)
                 {
                     SetMonData(&party[i], MON_DATA_MOVE1 + j, &partyData[i].moves[j]);
@@ -2103,28 +2262,36 @@ static u8 CreateNPCTrainerParty(struct Pokemon *party, u16 trainerNum, bool8 fir
             case F_TRAINER_PARTY_HELD_ITEM:
             {
                 const struct TrainerMonItemDefaultMoves *partyData = gTrainers[trainerNum].party.ItemDefaultMoves;
-
+if (checkStolenPokemon(trainerNum, species, i, FALSE)){
+                    continue;
+                }
                 for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
                     nameHash += gSpeciesNames[partyData[i].species][j];
 
                 personalityValue += nameHash << 8;
                 fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
-                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
-
+                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_PRESET, fixedOTID);
+                SetMonData(&party[i], MON_DATA_OT_GENDER, &otGender);
+                SetMonData(&party[i], MON_DATA_OT_NAME, gTrainers[trainerNum].trainerName);
+ 
                 SetMonData(&party[i], MON_DATA_HELD_ITEM, &partyData[i].heldItem);
                 break;
             }
             case F_TRAINER_PARTY_CUSTOM_MOVESET | F_TRAINER_PARTY_HELD_ITEM:
             {
                 const struct TrainerMonItemCustomMoves *partyData = gTrainers[trainerNum].party.ItemCustomMoves;
-
+if (checkStolenPokemon(trainerNum, species, i, FALSE)){
+                    continue;
+                }
                 for (j = 0; gSpeciesNames[partyData[i].species][j] != EOS; j++)
                     nameHash += gSpeciesNames[partyData[i].species][j];
 
                 personalityValue += nameHash << 8;
                 fixedIV = partyData[i].iv * MAX_PER_STAT_IVS / 255;
-                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_RANDOM_NO_SHINY, 0);
-
+                CreateMon(&party[i], partyData[i].species, partyData[i].lvl, fixedIV, TRUE, personalityValue, OT_ID_PRESET, fixedOTID);
+                SetMonData(&party[i], MON_DATA_OT_GENDER, &otGender);
+                SetMonData(&party[i], MON_DATA_OT_NAME, gTrainers[trainerNum].trainerName);
+                
                 SetMonData(&party[i], MON_DATA_HELD_ITEM, &partyData[i].heldItem);
 
                 for (j = 0; j < MAX_MON_MOVES; j++)

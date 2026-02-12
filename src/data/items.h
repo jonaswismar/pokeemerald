@@ -169,6 +169,19 @@ const struct Item gItems[] =
         .secondaryId = ITEM_PREMIER_BALL - FIRST_BALL,
     },
 
+    [ITEM_THIEF_BALL] =
+    {
+        .name = _("THIEF BALL"),
+        .itemId = ITEM_THIEF_BALL,
+        .price = 2000,
+        .description = sThiefBallDesc,
+        .pocket = POCKET_POKE_BALLS,
+        .type = ITEM_THIEF_BALL - FIRST_BALL,
+        .battleUsage = ITEM_B_USE_OTHER,
+        .battleUseFunc = ItemUseInBattle_PokeBall,
+        .secondaryId = ITEM_THIEF_BALL - FIRST_BALL,
+    },
+
 // Medicine
 
     [ITEM_POTION] =

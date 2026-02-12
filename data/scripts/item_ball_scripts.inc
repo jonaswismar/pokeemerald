@@ -526,6 +526,10 @@ AquaHideout_B2F_EventScript_ItemNestBall::
 	finditem ITEM_NEST_BALL
 	end
 
+AquaHideout_B2F_EventScript_ItemThiefBall::
+	finditem ITEM_THIEF_BALL
+	end
+
 AquaHideout_B2F_EventScript_ItemMasterBall::
 	finditem ITEM_MASTER_BALL      // Unused
 	end
@@ -652,6 +656,10 @@ MagmaHideout_3F_2R_EventScript_ItemPPMax::
 
 MagmaHideout_4F_EventScript_ItemMaxRevive::
 	finditem ITEM_MAX_REVIVE
+	end
+
+MagmaHideout_4F_EventScript_ItemThiefBall::
+	finditem ITEM_THIEF_BALL
 	end
 
 MagmaHideout_3F_3R_EventScript_ItemEscapeRope::

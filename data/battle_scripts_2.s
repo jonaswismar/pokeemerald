@@ -26,6 +26,7 @@ gBattlescriptsForBallThrow::
 	.4byte BattleScript_BallThrow        @ ITEM_TIMER_BALL
 	.4byte BattleScript_BallThrow        @ ITEM_LUXURY_BALL
 	.4byte BattleScript_BallThrow        @ ITEM_PREMIER_BALL
+	.4byte BattleScript_BallThrow        @ ITEM_THIEF_BALL
 
 	.align 2
 gBattlescriptsForUsingItem::
@@ -64,6 +65,7 @@ BattleScript_SafariBallThrow::
 BattleScript_SuccessBallThrow::
 	jumpifhalfword CMP_EQUAL, gLastUsedItem, ITEM_SAFARI_BALL, BattleScript_PrintCaughtMonInfo
 	incrementgamestat GAME_STAT_POKEMON_CAPTURES
+	jumpifbyte CMP_EQUAL, gUsingThiefBall, THIEF_BALL_CAUGHT, BattleScript_SuccessBallThrowThief
 BattleScript_PrintCaughtMonInfo::
 	printstring STRINGID_GOTCHAPKMNCAUGHTPLAYER
 	trysetcaughtmondexflags BattleScript_TryNicknameCaughtMon
@@ -85,6 +87,23 @@ BattleScript_GiveCaughtMonEnd::
 BattleScript_SuccessBallThrowEnd::
 	setbyte gBattleOutcome, B_OUTCOME_CAUGHT
 	finishturn
+BattleScript_SuccessBallThrowThief::
+	printstring STRINGID_GOTCHAPKMNCAUGHTNOBGM
+	trysetcaughtmondexflags BattleScript_SuccessBallThrowEndThiefGive
+	printstring STRINGID_PKMNDATAADDEDTODEX
+	waitstate
+BattleScript_SuccessBallThrowEndThiefGive::
+	setbyte gBattleCommunication, 4
+	trygivecaughtmonnick BattleScript_GiveCaughtMonEndThief
+	givecaughtmon
+	printfromtable gCaughtMonStringIds
+	waitmessage B_WAIT_TIME_LONG
+	goto BattleScript_SuccessBallThrowEndThief
+BattleScript_GiveCaughtMonEndThief::
+	givecaughtmon
+BattleScript_SuccessBallThrowEndThief::
+	cleareffectsonfaint BS_TARGET
+	goto BattleScript_HandleFaintedMon
 
 BattleScript_WallyBallThrow::
 	printstring STRINGID_GOTCHAPKMNCAUGHTWALLY
@@ -106,7 +125,16 @@ BattleScript_TrainerBallBlock::
 	waitmessage B_WAIT_TIME_LONG
 	printstring STRINGID_TRAINERBLOCKEDBALL
 	waitmessage B_WAIT_TIME_LONG
+	jumpifbyte CMP_EQUAL, gUsingThiefBall, THIEF_BALL_CANNOT_USE, BattleScript_TrainerBallBlockThiefBall
 	printstring STRINGID_DONTBEATHIEF
+	goto BattleScript_TrainerBallBlockEnd
+BattleScript_TrainerBallBlockThiefBall::
+	setbyte gUsingThiefBall, THIEF_BALL_NOT_USING
+	printstring STRINGID_CANTWITHTHIEF
+	jumpifnotbattletype BATTLE_TYPE_DOUBLE, BattleScript_TrainerBallBlockEnd
+	waitmessage B_WAIT_TIME_LONG
+	printstring STRINGID_TOOMANYWITNESSES
+BattleScript_TrainerBallBlockEnd::
 	waitmessage B_WAIT_TIME_LONG
 	finishaction
 

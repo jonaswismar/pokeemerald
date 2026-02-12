@@ -3191,7 +3191,11 @@ static void Cmd_getexp(void)
     switch (gBattleScripting.getexpState)
     {
     case 0: // check if should receive exp at all
-        if (GetBattlerSide(gBattlerFainted) != B_SIDE_OPPONENT || (gBattleTypeFlags &
+        if (gUsingThiefBall == THIEF_BALL_CAUGHT){
+            gUsingThiefBall = THIEF_BALL_NOT_USING;
+            gBattleScripting.getexpState = 6; // goto last case
+        }
+        else if (GetBattlerSide(gBattlerFainted) != B_SIDE_OPPONENT || (gBattleTypeFlags &
                                                                    (BATTLE_TYPE_LINK | BATTLE_TYPE_RECORDED_LINK | BATTLE_TYPE_TRAINER_HILL | BATTLE_TYPE_FRONTIER | BATTLE_TYPE_SAFARI | BATTLE_TYPE_BATTLE_TOWER | BATTLE_TYPE_EREADER_TRAINER)))
         {
             gBattleScripting.getexpState = 6; // goto last case
@@ -9591,8 +9595,21 @@ static void Cmd_handleballthrow(void)
 
     gActiveBattler = gBattlerAttacker;
     gBattlerTarget = BATTLE_OPPOSITE(gBattlerAttacker);
-
-    if (gBattleTypeFlags & BATTLE_TYPE_TRAINER)
+    if (gBattleTypeFlags & BATTLE_TYPE_TRAINER && gLastUsedItem == ITEM_THIEF_BALL){
+        if (gBattleTypeFlags & (BATTLE_TYPE_DOUBLE | BATTLE_TYPE_LINK | BATTLE_TYPE_SAFARI | 
+        BATTLE_TYPE_EREADER_TRAINER | BATTLE_TYPE_SECRET_BASE | BATTLE_TYPE_FRONTIER | 
+        BATTLE_TYPE_INGAME_PARTNER | BATTLE_TYPE_RECORDED_LINK)){
+            gUsingThiefBall = THIEF_BALL_CANNOT_USE;
+        }
+        else{
+            gUsingThiefBall = THIEF_BALL_CATCHING;
+        }
+    }
+    else{
+        gUsingThiefBall = THIEF_BALL_NOT_USING;
+    }
+    if (gBattleTypeFlags & BATTLE_TYPE_TRAINER &&
+    (gUsingThiefBall == THIEF_BALL_NOT_USING || gUsingThiefBall == THIEF_BALL_CANNOT_USE))
     {
         BtlController_EmitBallThrowAnim(B_COMM_TO_CONTROLLER, BALL_TRAINER_BLOCK);
         MarkBattlerForControllerExec(gActiveBattler);
@@ -9657,6 +9674,12 @@ static void Cmd_handleballthrow(void)
             case ITEM_PREMIER_BALL:
                 ballMultiplier = 10;
                 break;
+            case ITEM_THIEF_BALL:  // If used on trainer, it's 2.5x; if used on a wild Pokemon, it's 1x
+                if (gBattleTypeFlags & BATTLE_TYPE_TRAINER)
+                    ballMultiplier = 25;
+                else
+                    ballMultiplier = 10;
+                break;
             }
         }
         else
@@ -9688,6 +9711,9 @@ static void Cmd_handleballthrow(void)
         {
             BtlController_EmitBallThrowAnim(B_COMM_TO_CONTROLLER, BALL_3_SHAKES_SUCCESS);
             MarkBattlerForControllerExec(gActiveBattler);
+            if (gUsingThiefBall == THIEF_BALL_CATCHING){
+                gUsingThiefBall = THIEF_BALL_CAUGHT;
+            }
             gBattlescriptCurrInstr = BattleScript_SuccessBallThrow;
             SetMonData(&gEnemyParty[gBattlerPartyIndexes[gBattlerTarget]], MON_DATA_POKEBALL, &gLastUsedItem);
 
@@ -9714,6 +9740,9 @@ static void Cmd_handleballthrow(void)
 
             if (shakes == BALL_3_SHAKES_SUCCESS) // mon caught, copy of the code above
             {
+                if (gUsingThiefBall == THIEF_BALL_CATCHING){
+                    gUsingThiefBall = THIEF_BALL_CAUGHT;
+                }
                 gBattlescriptCurrInstr = BattleScript_SuccessBallThrow;
                 SetMonData(&gEnemyParty[gBattlerPartyIndexes[gBattlerTarget]], MON_DATA_POKEBALL, &gLastUsedItem);
 
@@ -9724,6 +9753,7 @@ static void Cmd_handleballthrow(void)
             }
             else // not caught
             {
+                gUsingThiefBall = THIEF_BALL_NOT_USING;
                 gBattleCommunication[MULTISTRING_CHOOSER] = shakes;
                 gBattlescriptCurrInstr = BattleScript_ShakeBallThrow;
             }
@@ -9757,14 +9787,22 @@ static void Cmd_givecaughtmon(void)
     gBattleResults.caughtMonSpecies = GetMonData(&gEnemyParty[gBattlerPartyIndexes[BATTLE_OPPOSITE(gBattlerAttacker)]], MON_DATA_SPECIES, NULL);
     GetMonData(&gEnemyParty[gBattlerPartyIndexes[BATTLE_OPPOSITE(gBattlerAttacker)]], MON_DATA_NICKNAME, gBattleResults.caughtMonNick);
     gBattleResults.caughtMonBall = GetMonData(&gEnemyParty[gBattlerPartyIndexes[BATTLE_OPPOSITE(gBattlerAttacker)]], MON_DATA_POKEBALL, NULL);
-
+if (gUsingThiefBall == THIEF_BALL_CAUGHT)
+    {
+        u16 partyIndex = gBattlerPartyIndexes[BATTLE_OPPOSITE(gBattlerAttacker)]; 
+        checkStolenPokemon(gTrainerBattleOpponent_A, gBattleMons[gBattlerTarget].species, partyIndex, TRUE);
+        gBattleMons[gBattlerTarget].hp = 0;
+        SetMonData(&gEnemyParty[gBattlerPartyIndexes[gBattlerAttacker ^ BIT_SIDE]], MON_DATA_HP, &gBattleMons[gBattlerTarget].hp);
+        gBattlerFainted = gBattlerTarget;
+        SetHealthboxSpriteInvisible(gHealthboxSpriteIds[gBattlerTarget]);
+    }
     gBattlescriptCurrInstr++;
 }
 
 static void Cmd_trysetcaughtmondexflags(void)
 {
-    u16 species = GetMonData(&gEnemyParty[0], MON_DATA_SPECIES, NULL);
-    u32 personality = GetMonData(&gEnemyParty[0], MON_DATA_PERSONALITY, NULL);
+    u16 species = GetMonData(&gEnemyParty[gBattlerPartyIndexes[BATTLE_OPPOSITE(gBattlerAttacker)]], MON_DATA_SPECIES, NULL);
+    u32 personality = GetMonData(&gEnemyParty[gBattlerPartyIndexes[BATTLE_OPPOSITE(gBattlerAttacker)]], MON_DATA_PERSONALITY, NULL);
 
     if (GetSetPokedexFlag(SpeciesToNationalPokedexNum(species), FLAG_GET_CAUGHT))
     {
@@ -9784,7 +9822,7 @@ static void Cmd_trysetcaughtmondexflags(void)
 
 static void Cmd_displaydexinfo(void)
 {
-    u16 species = GetMonData(&gEnemyParty[0], MON_DATA_SPECIES, NULL);
+    u16 species = GetMonData(&gEnemyParty[gBattlerPartyIndexes[BATTLE_OPPOSITE(gBattlerAttacker)]], MON_DATA_SPECIES, NULL);
 
     switch (gBattleCommunication[0])
     {
