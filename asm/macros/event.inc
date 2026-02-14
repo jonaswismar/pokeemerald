@@ -1983,4 +1983,3 @@
 	.macro mappopup
 	callnative Script_MapPopUp
 	.endm
-	
