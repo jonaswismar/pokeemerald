@@ -1983,3 +1983,161 @@
 	.macro mappopup
 	callnative Script_MapPopUp
 	.endm
+
+	@ applymovement with waitmovement built-in.
+	@ If wait is not provided, waitmovement 0 is emitted.
+	@ If wait has a value, the emitted waitmovement will have that value.
+	@ i.e. if wait is 7, waitmovement 7 will be emitted.
+	@ If you don't want a waitmovement emitted, use applymovement instead.
+	.macro applymove localid:req, movements:req, wait, map
+	applymovement \localid, \movements, \map
+	.ifb \wait
+		waitmovement 0
+	.else
+		waitmovement \wait
+	.endif
+	.endm
+
+	@ applymovement with LOCALID_PLAYER as the localid and a built-in waitmovement 0.
+	@ If wait is not provided, then waitmovement 0 is emitted.
+	@ If you don't want that emitted (ex: the player and another NPC are moving
+	@ at the same time), then provide any argument for wait.
+	.macro applymoveplayer movements:req, wait, map
+	applymovement LOCALID_PLAYER, \movements, \map
+	.ifb \wait
+		waitmovement 0
+	.endif
+	.endm
+
+	@ Calls Common_Movement_WalkInPlaceFaster(Up/Down/Left/Right) for provided localid.
+	@ If wait is not provided, then waitmovement 0 is emitted. If you don't want that
+	@ emitted (ex: multiple NPCs are moving at the same time), then provide any
+	@ argument for wait.
+	.macro stepinplace localid:req, direction:req, wait
+	.if \direction == DIR_NORTH
+		applymovement \localid, Common_Movement_WalkInPlaceFasterUp
+		.ifb \wait
+			waitmovement 0
+		.endif
+	.elseif \direction == DIR_SOUTH
+		applymovement \localid, Common_Movement_WalkInPlaceFasterDown
+		.ifb \wait
+			waitmovement 0
+		.endif
+	.elseif \direction == DIR_WEST
+		applymovement \localid, Common_Movement_WalkInPlaceFasterLeft
+		.ifb \wait
+			waitmovement 0
+		.endif
+	.elseif \direction == DIR_EAST
+		applymovement \localid, Common_Movement_WalkInPlaceFasterRight
+		.ifb \wait
+			waitmovement 0
+		.endif
+	.endif
+	.endm
+
+	@ Does Common_Movement_WalkInPlaceFaster(Up/Down/Left/Right) for the player.
+	@ If wait is not provided, then waitmovement 0 is emitted. If you don't want that
+	@ emitted (ex: multiple NPCs are moving at the same time), then provide any
+	@ argument for wait.
+	.macro stepinplaceplayer direction:req, wait
+	.if \direction == DIR_NORTH
+		applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterUp
+		.ifb \wait
+			waitmovement 0
+		.endif
+	.elseif \direction == DIR_SOUTH
+		applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterDown
+		.ifb \wait
+			waitmovement 0
+		.endif
+	.elseif \direction == DIR_WEST
+		applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterLeft
+		.ifb \wait
+			waitmovement 0
+		.endif
+	.elseif \direction == DIR_EAST
+		applymovement LOCALID_PLAYER, Common_Movement_WalkInPlaceFasterRight
+		.ifb \wait
+			waitmovement 0
+		.endif
+	.endif
+	.endm
+
+	@ Calls Common_Movement_FaceOriginalDirection for provided localid.
+	@ If wait is left empty, then waitmovement 0 is emitted. If you don't want that
+	@ emitted (ex: multiple NPCs are moving at the same time), then provide any
+	@ argument for wait.
+	.macro faceoriginaldir localid:req, wait
+	applymovement \localid, Common_Movement_FaceOriginalDirection
+	.ifb \wait
+		waitmovement 0
+	.endif
+	.endm
+
+	@ alias of turnobject with LOCALID_PLAYER as the localid argument
+	.macro turnplayer direction:req
+	turnobject LOCALID_PLAYER, \direction
+	.endm
+
+	@ This replicates the typical OW NPC Pokemon script, which is:
+	@ -----
+	@ lock
+	@ faceplayer
+	@ waitse
+	@ playmoncry SPECIES, MODE
+	@ msgbox SOME_MESSAGE
+	@ waitmoncry
+	@ -----
+	@ release and end should follow this macro in most cases.
+	@ message should just be what the Pokemon says, not its species name.
+	@ Its species name is automatically buffered, rendering the msgbox as:
+	@ "SPECIES: MESSAGE"
+	@ If mode is not provided, it will use CRY_MODE_NORMAL. Otherwise,
+	@ it'll use the CRY_MODE_* constants.
+	.macro moncryscript species:req, message:req, mode
+	lock
+	faceplayer
+	waitse
+	.ifb \mode
+		playmoncry \species, CRY_MODE_NORMAL
+	.else
+		playmoncry \species, \mode
+	.endif
+		bufferspeciesname 1, \species
+		bufferstring 2, \message
+		msgbox Text_MonCryScript
+		waitmoncry
+	.endm
+
+	@ This replicates the most common emote structure in the game, which is:
+	@ -----
+	@ playse SE_PIN
+	@ applymovement LOCALID, Common_Movement_ExclamationMark @ (or others)
+	@ waitmovement 0
+	@ applymovement LOCALID, Common_Movement_Delay48
+	@ waitmovement 0
+	@ -----
+	@ If emote is not provided, then it will do an exclamation mark emote.
+	@ Other params include:
+	@ EMOTE_EXCLAM, EMOTE_QUESTION, and EMOTE_HEART. Invalid entries
+	@ do the exclamation mark emote.
+	.macro emote localid:req, emoteArg
+	playse SE_PIN
+	.ifb \emoteArg
+		applymovement \localid, Common_Movement_ExclamationMark
+	.else
+		.if \emoteArg == EMOTE_QUESTION
+			applymovement \localid, Common_Movement_QuestionMark
+		.elseif \emoteArg == EMOTE_HEART
+			applymovement \localid, Common_Movement_Heart
+		.else
+			applymovement \localid, Common_Movement_ExclamationMark
+		.endif
+	.endif
+	waitmovement 0
+	applymovement \localid, Common_Movement_Delay48
+	waitmovement 0
+	.endm
+
